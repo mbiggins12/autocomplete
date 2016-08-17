@@ -9,6 +9,8 @@
 
 library(shiny)
 library(shinydashboard)
+library(ggplot2)
+library(DT)
 
 ui <- dashboardPage(skin = "red",
   dashboardHeader(title = "AutoComplete", 
@@ -47,13 +49,16 @@ ui <- dashboardPage(skin = "red",
             fileInput('file1', 'Choose CSV File', 
                       accept=c('text/csv', 'text/comma-separated-values,text/plain', '.csv')),
             tags$hr(),
-            checkboxInput('header', 'Header', TRUE),
-            radioButtons('sep', 'Separator',c(Comma=',', Semicolon=';', Tab='\t'), 'Comma'),
-            radioButtons('quote', 'Quote', c(None='', 'Double Quote'='"', 'Single Quote'="'"), 'Double Quote')
+            conditionalPanel(
+              '', # need to figure out how to make conditional on data being there
+              checkboxGroupInput('show_vars', 'Columns in data to show:',
+                                 c("pclass", "survived", "sex", "age", "sibsp", "parch", "personID", "Passengers"), 
+                                 selected = c("pclass", "survived", "sex", "age", "sibsp", "parch", "personID", "Passengers"))
+            ) # ASK ANDREW...CAN HARD CODE BUT CAN'T FIGURE OUT REACTIVE
           ),
           mainPanel(
             tableOutput('contents'),
-            tableOutput('colref')
+            tabPanel('Data', DT::dataTableOutput('mytable1'))
           )
         )
       ),
@@ -61,22 +66,25 @@ ui <- dashboardPage(skin = "red",
       tabItem(tabName = "tabgraph",
               sidebarLayout(
                 sidebarPanel(
-                  sliderInput("bins",
-                              "Number of bins:",
-                              min = 1,
-                              max = 50,
-                              value = 30)
+                    checkboxGroupInput('x_vars', 'x-axis:',
+                                       c("pclass", "survived", "sex", "age", "sibsp", "parch", "personID", "Passengers"), 
+                                       selected = NULL),
+                    checkboxGroupInput('y_vars', 'y-axis:',
+                                       c("pclass", "survived", "sex", "age", "sibsp", "parch", "personID", "Passengers"), 
+                                       selected = NULL)
+                   # ASK ANDREW...CAN HARD CODE BUT CAN'T FIGURE OUT REACTIVE
                 ),
                 
                 # Show a plot of the generated distribution
                 mainPanel(
-                  plotOutput("distPlot")
+                  plotOutput("testPlot"),
+                  textOutput("testText")
                 )
               )
       ),
       # Third tab content
       tabItem(tabName = "report",
-              h2("Report Content")
+        h2("Report")
       )
     )
   )
@@ -85,28 +93,33 @@ server <- function(input, output) {
   # these can only be done inside a reactive expression
     #input$searchText
     #input$searchButton
-  output$contents <- renderTable({
-    
-    # input$file1 will be NULL initially. After the user selects and uploads a 
-    # file, it will be a data frame with 'name', 'size', 'type', and 'datapath' 
-    # columns. The 'datapath' column will contain the local filenames where the 
-    # data can be found.
-    
+
+  output$mytable1 <- DT::renderDataTable({
     inFile <- input$file1
-    
     if (is.null(inFile))
       return(NULL)
-      read.csv(inFile$datapath, header=input$header, sep=input$sep, quote=input$quote)
+    
+    test <- read.csv(inFile$datapath)
+    DT::datatable(test[, input$show_vars, drop = FALSE])
   })
-  output$distPlot <- renderPlot({
+  output$testPlot <- renderPlot({
+    inFile <- input$file1
+    if (is.null(inFile))
+      return(NULL)
     
-    # generate bins based on input$bins from ui.R
-    x    <- faithful[, 2]
-    bins <- seq(min(x), max(x), length.out = input$bins + 1)
+    test <- read.csv(inFile$datapath)
+    plot(test[,input$x_vars], test[,input$y_vars])
+  })
+  output$testText <- renderText({
+    inFile <- input$file1
+    if (is.null(inFile))
+      return(NULL)
     
-    # draw the histogram with the specified number of bins
-    hist(x, breaks = bins, col = 'darkgray', border = 'white')
-    
+    taco <- read.csv(inFile$datapath)
+    names(taco)
+    checkboxGroupInput('test', 'test:',
+                       c("pclass", "survived", "sex", "age", "sibsp", "parch", "personID", "Passengers"), 
+                       selected = NULL)
   })
 }
 
