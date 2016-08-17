@@ -49,12 +49,7 @@ ui <- dashboardPage(skin = "red",
             fileInput('file1', 'Choose CSV File', 
                       accept=c('text/csv', 'text/comma-separated-values,text/plain', '.csv')),
             tags$hr(),
-            conditionalPanel(
-              '', # need to figure out how to make conditional on data being there
-              checkboxGroupInput('show_vars', 'Columns in data to show:',
-                                 c("pclass", "survived", "sex", "age", "sibsp", "parch", "personID", "Passengers"), 
-                                 selected = c("pclass", "survived", "sex", "age", "sibsp", "parch", "personID", "Passengers"))
-            ) # ASK ANDREW...CAN HARD CODE BUT CAN'T FIGURE OUT REACTIVE
+              checkboxGroupInput('show_vars', '', NULL, NULL)
           ),
           mainPanel(
             tableOutput('contents'),
@@ -66,19 +61,13 @@ ui <- dashboardPage(skin = "red",
       tabItem(tabName = "tabgraph",
               sidebarLayout(
                 sidebarPanel(
-                    checkboxGroupInput('x_vars', 'x-axis:',
-                                       c("pclass", "survived", "sex", "age", "sibsp", "parch", "personID", "Passengers"), 
-                                       selected = NULL),
-                    checkboxGroupInput('y_vars', 'y-axis:',
-                                       c("pclass", "survived", "sex", "age", "sibsp", "parch", "personID", "Passengers"), 
-                                       selected = NULL)
-                   # ASK ANDREW...CAN HARD CODE BUT CAN'T FIGURE OUT REACTIVE
+                    checkboxGroupInput('x_vars', 'Data Import Needed', NULL, selected = NULL),
+                    checkboxGroupInput('y_vars', '', NULL, selected = NULL)
                 ),
                 
                 # Show a plot of the generated distribution
                 mainPanel(
-                  plotOutput("testPlot"),
-                  textOutput("testText")
+                  plotOutput("testPlot")
                 )
               )
       ),
@@ -89,7 +78,7 @@ ui <- dashboardPage(skin = "red",
     )
   )
 )
-server <- function(input, output) {
+server <- function(input, output, session) {
   # these can only be done inside a reactive expression
     #input$searchText
     #input$searchButton
@@ -100,26 +89,19 @@ server <- function(input, output) {
       return(NULL)
     
     test <- read.csv(inFile$datapath)
+    updateCheckboxGroupInput(session, "show_vars", label = "Columns in Data to Show:", choices = names(test), selected = input$show_vars)
     DT::datatable(test[, input$show_vars, drop = FALSE])
   })
+  
   output$testPlot <- renderPlot({
     inFile <- input$file1
     if (is.null(inFile))
       return(NULL)
     
     test <- read.csv(inFile$datapath)
+    updateCheckboxGroupInput(session, "x_vars", label = "X-axis:", choices = names(test), selected = input$x_vars)
+    updateCheckboxGroupInput(session, "y_vars", label = "Y-axis:", choices = names(test), selected = input$y_vars)
     plot(test[,input$x_vars], test[,input$y_vars])
-  })
-  output$testText <- renderText({
-    inFile <- input$file1
-    if (is.null(inFile))
-      return(NULL)
-    
-    taco <- read.csv(inFile$datapath)
-    names(taco)
-    checkboxGroupInput('test', 'test:',
-                       c("pclass", "survived", "sex", "age", "sibsp", "parch", "personID", "Passengers"), 
-                       selected = NULL)
   })
 }
 
